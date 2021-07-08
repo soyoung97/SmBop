@@ -89,7 +89,7 @@ local dataset_path = "dataset/";
 
 
 local max_steps = misc_params.max_steps;
-local examples = 100;
+local examples = 7000;
 
 local setting = large_setting + if misc_params.train_as_dev then trainset_config else devset_config;
 
@@ -139,7 +139,7 @@ local dataset_reader_name = "smbop";
     "value_pred":misc_params.value_pred,
     "use_longdb":misc_params.use_longdb,
   },
-  "train_data_path": dataset_path + "hundred_spider.json",
+  "train_data_path": dataset_path + "train_spider.json",
   "validation_data_path": dataset_path + setting.data_suffix,
 
   "model": {

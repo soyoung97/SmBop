@@ -237,5 +237,4 @@ local dataset_reader_name = "smbop";
             },
     "learning_rate_scheduler": scheduler,
   },
-
 }

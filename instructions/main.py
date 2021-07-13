@@ -43,7 +43,7 @@ def get_data():
     with open('../dataset/train_gold.sql', 'r') as f:
         data = f.read().strip().split('\n')
     # currently experimenting things without JOIN
-    data = [x.split("\t")[0] for x in data] # if 'JOIN' in x]
+    data = [x.split("\t")[0] for x in data if 'JOIN' in x]
     data = [x.replace(";", '') for x in data]
     return data
     """
@@ -155,6 +155,8 @@ def dict2sql(querydict):
         return f"MIN({dict2sql(querydict['min'])})"
     elif 'avg' in keys:
         return f"AVG({dict2sql(querydict['avg'])})"
+    elif 'between' in keys:
+        return f"{dict2sql(querydict['between'][0])} BETWEEN {dict2sql(querydict['between'][1])} AND {dict2sql(querydict['between'][2])}"
     else:
         import pdb; pdb.set_trace()
 

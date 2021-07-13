@@ -63,7 +63,7 @@ def run():
     parser.add_argument("--rat_dropout", default=0.2, type=float)
     parser.add_argument("--lm_lr", default=3e-6, type=float)
     parser.add_argument("--lr", type=float, default=0.000186)
-    parser.add_argument("--batch_size", default=10, type=int)
+    parser.add_argument("--batch_size", default=40, type=int)
     parser.add_argument("--grad_acum", default=4, type=int)
     parser.add_argument("--max_steps", default=60000, type=int)
     parser.add_argument("--power", default=0.5, type=float)
@@ -138,7 +138,7 @@ def run():
             params=settings,
             serialization_dir=f"{prefix}experiments/{experiment_name}",
             recover=args.recover,
-            force=True,
+            force=False,
         )
 
 

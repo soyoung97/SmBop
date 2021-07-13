@@ -531,4 +531,10 @@ mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
 
 
+
+#res = SQLParser.parseString('SELECT T1.name FROM station AS T1 JOIN status AS T2 ON T1.id = T2.station_id GROUP BY T2.station_id HAVING avg(bikes_available) > 10 EXCEPT SELECT name FROM station WHERE city = "San Jose"')
+#res = SQLParser.parseString('SELECT COUNT( * ) FROM flights JOIN airports ON flights.destairport = airports.airportcode WHERE airports.city = ’Aberdeen’')
+#from pprint import pprint
+#pprint(res[0])
+#import pdb; pdb.set_trace()
 # parse = lambda sql: SQLParser.parseString(sql, parseAll=True)

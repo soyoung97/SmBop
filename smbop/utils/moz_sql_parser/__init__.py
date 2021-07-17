@@ -13,7 +13,8 @@ from __future__ import absolute_import, division, unicode_literals
 from collections import Mapping
 import json
 
-from mo_future import binary_type, items, number_types, text_type
+from mo_future import binary_type, items, number_types
+from mo_future import text as text_type
 from pyparsing import ParseException, ParseResults
 
 from smbop.utils.moz_sql_parser.sql_parser import SQLParser, all_exceptions

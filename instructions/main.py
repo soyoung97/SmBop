@@ -32,8 +32,8 @@ class SQLParser():
 
     def run(self):
         self.get_data()
-        for i, x in enumerate(self.data):
-            print(f"\n\nOriginal SQL: {x}\nOriginal tree: ")
+        for i, x in enumerate(self.data[1550:]):
+            print(f"\n\n{i} - Original SQL: {x}\nOriginal tree: ")
             full = parser.sql_to_dict(x)
             pprint(full)
             print(f"\nSplitted: \n")
@@ -103,10 +103,17 @@ class SQLParser():
                     output = "SELECT * FROM "
                     join_query = ""
                     for val in full['from']: # TODO: How do we achieve good accuracy on "multiple join on and .." query?
-                        if val.get('join') is None: # this item is None
+                        if type(val) == str:
+                            # TODO: case when it is not T1/T2 but direct column names, we may need to preprocess to unify it
+                            output += f"{val} "
+                        elif val.get('join') is None: # this item is None
                             output += f"{val['value']} as {val['name']} "
                         else:
-                            join_query += f"JOIN {val['join']['value']} as {val['join']['name']} "
+                            if type(val['join']) == str:
+                                join_query += f"JOIN {val['join']}"
+                            else:
+                                join_query += f"JOIN {val['join']['value']} as {val['join']['name']} "
+
                             if val.get('on') is not None:
                                 join_query += f"ON {self.to_string(val['on'])}"
                     output += join_query
@@ -127,11 +134,13 @@ class SQLParser():
                     from_val = "$(PREV)"
                 else:
                     from_val = self.to_string(full['from'])
-                output = f"{from_val} GROUP BY {self.to_string(full['groupby'])}"
+                groupby_columns = self._flatten(full['groupby'], aggregate_key='value', aggregate_func=lambda x: ','.join(x))
+                output = f"{from_val} GROUP BY {groupby_columns}"
             elif op == 'having':
                 output = f"$(PREV) HAVING {self.to_string(full['having'])}"
             elif op == 'orderby':
-                output = f"$(PREV) ORDER BY {self.to_string(full['orderby'])}"
+                orderby_columns = self._flatten(full['orderby'], aggregate_key='value', aggregate_func=lambda x: ','.join(x))
+                output = f"$(PREV) ORDER BY {orderby_columns}"
             elif op == 'limit':
                 output = f"$(PREV) LIMIT {self.to_string(full['limit'])}"
             else:
@@ -144,11 +153,9 @@ class SQLParser():
     def to_string(self, querydict):
         MULTI_FUNC = ['and', 'or']
         SIMPLE_AGG_FUNC = ['distinct', 'count', 'max', 'min', 'avg', 'sum']
-        compare2equations = {'eq': '=', 'in': 'IN', 'nin': 'NOT IN', 'neq': '!=', 'gt': '>', 'lt': '<', 'gte': '>=', 'lte': '<='}
+        compare2equations = {'add': '+', 'sub': '-', 'eq': '=', 'in': 'IN', 'nin': 'NOT IN', 'neq': '!=', 'gt': '>', 'lt': '<', 'gte': '>=', 'lte': '<='}
         COMPARE_FUNC = compare2equations.keys()
-        if type(querydict) == str:
-            return querydict
-        if type(querydict) == int:
+        if type(querydict) in [str, int, float]:
             return querydict
         append_on_end = ''
         keys = list(querydict.keys())
@@ -183,6 +190,8 @@ class SQLParser():
             print("EDGE CASE")
             print("--------Parsing inner--------")
             print(">>>>> \n".join(self.reconstruct(querydict['query'])))
+        elif key == 'missing':
+            return f'{querydict['missing']} = "null"'
         else:
             print(self.idx)
             import pdb; pdb.set_trace()

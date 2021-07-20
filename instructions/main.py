@@ -29,7 +29,7 @@ class SQLParser():
         self.get_data()
         unable_split = 0
         different = []
-        for i, x in enumerate(self.data[1128:]):
+        for i, x in enumerate(self.data[3000:]):
             self.parsed_output = {}
             print(f"\n\n{i} - Original SQL: {x}\nOriginal tree: ")
             try:
@@ -189,30 +189,29 @@ class SQLParser():
             ord_q += [self.tok['dleft'] + ' ' + x for x in self.order(rec_q['op']['left'])]
             ord_q += [self.tok['dright'] + ' ' + x for x in self.order(rec_q['op']['right'])]
             ord_q.append(f"{self.tok['rleft']} {rec_q['op']['op'].upper()} {self.tok['rright']}")
+            if rec_q['op']['left'].get('query') is not None:
+                import pdb; pdb.set_trace()
             return ord_q
 
         ORDERING = ['select', 'from', 'where', 'groupby', 'having', 'orderby', 'limit']
         key2ord = {key: i for i, key in enumerate(ORDERING)}
         data = [(key2ord[key], rec_q[key]) for key in rec_q]
         ord_q += [x[1] for x in sorted(data, key=lambda k: k[0])]
-        import pdb; pdb.set_trace()
-        number, innq = self.find_corresponding_inner_query(ord_q)
-        if innq is not None:
-            try:
-                ord_q = [f'[D_INNER_{number}] ' + x for x in self.order(innq)] + ord_q
-            except:
-                import pdb; pdb.set_trace()
+        inner_queries = self.find_corresponding_inner_queries(ord_q)
+        if inner_queries is not None:
+            for num, subq in inner_queries:
+                ord_q = [f"[D_INNER_{num}] " + x for x in self.order(subq)] + ord_q
         if self.tok['rprev'] in ord_q[0]:
             print("SHOULD NOT BE Replace to PREV IN HERE!")
             import pdb; pdb.set_trace()
         return ord_q
 
-    def find_corresponding_inner_query(self, ord_q):
+    def find_corresponding_inner_queries(self, ord_q):
         for query in ord_q:
             if 'R_INNER' in query:
-                number = int(self.pattern.findall(query)[0])
-                return number, self.subquery[number]
-        return None, None
+                number = [int(x) for x in self.pattern.findall(query)]
+                return [[num, self.subquery[num]] for num in number]
+        return None
 
 
     def _merge_sql(self, prev, cur):

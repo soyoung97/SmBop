@@ -7,13 +7,16 @@ from smbop.utils import ra_preproc as ra_preproc
 from anytree.exporter import DotExporter
 from pprint import pprint
 import re
+import json
 from collections import defaultdict
+from tqdm import tqdm
 
 class SQLParser():
-    def __init__(self):
+    def __init__(self, verbose=False):
         self.subquery = []
         self.pattern = re.compile(r"\[R_INNER_(\d+)\]")
         self.tok = {'rprev': '[R_PREV]', 'dprev': '[D_PREV]', 'dleft': '[D_LEFT]', 'rleft': '[R_LEFT]', 'dright': '[D_RIGHT]', 'rright': '[R_RIGHT]'}
+        self.verbose=verbose
 
     def sql_to_dict(self, sql_string):
         tree_dict = msp.parse(sql_string)
@@ -26,27 +29,33 @@ class SQLParser():
         return tree_obj
 
     def run(self):
-        self.get_data()
+        self.get_data_json()
         unable_split = 0
         different = []
-        for i, x in enumerate(self.data[3000:]):
+        for i, info in tqdm(enumerate(self.data)):
+            x = info['query']
             self.parsed_output = {}
-            print(f"\n\n{i} - Original SQL: {x}\nOriginal tree: ")
+            if self.verbose:
+                print(f"\n\n{i} - Original SQL: {x}\nOriginal tree: ")
             try:
                 orig_parsed_query = parser.sql_to_dict(x)
             except:
-                print("Was unable to parse corresponding SQL")
-                unable_split += 1
-                continue
-            pprint(orig_parsed_query)
-            print(f"\nSplitted: \n")
+                if self.verbose:
+                    print("Was unable to parse corresponding SQL")
+                    unable_split += 1
+                    self.data[i]['stepwise_query'] = [x]
+                    continue
+            if self.verbose:
+                pprint(orig_parsed_query)
+                print(f"\nSplitted: \n")
             parsed_output = parser.reconstruct(orig_parsed_query)
             res = self.order(parsed_output)
-            print('\n'.join(res))
-            print('merged')
             merged = self.merge_subsql(res)
-            print(merged)
-            #compare_merged = re.sub(r"(?<=[^\s])(?=[,])", ' ', merged)
+            self.data[i]['stepwise_query'] = res
+            if self.verbose:
+                print('\n'.join(res))
+                print('merged')
+                print(merged)
             if merged.upper().replace(' ', '').replace('(', '').replace(')', '') != x.upper().replace(' ', '').replace('(', '').replace(')', ''):
                 print("DIFFERNET!!")
                 print(x)
@@ -56,16 +65,28 @@ class SQLParser():
         print(f"TOTAL: {len(self.data)}, unable to parse: {unable_split}, {100*unable_split/len(self.data)}%")
         print(f"different: {len(different)}!")
         pprint(different)
+        with open('../dataset/train_spider_with_stepwise.json', 'w') as f:
+            json.dump(self.data, f, indent=4)
+        print("Saved json to [train_spider_with_stepwise.json]!!")
+
         import pdb; pdb.set_trace()
 
-    def get_data(self):
-        global nodeidx
+    def get_data_sql(self):
         with open('../dataset/train_gold.sql', 'r') as f:
             data = f.read().strip().split('\n')
         # currently experimenting things without JOIN
         data = [x.split("\t")[0] for x in data] # if 'LIKE' in x]
         data = [x.replace(";", '').replace('"', "'") for x in data]
         data = [re.sub(' +', ' ', x) for x in data]
+        self.data = data
+        return data
+
+    def get_data_json(self):
+        with open('../dataset/train_spider.json', 'r') as f:
+            data = json.load(f)
+        for i, info in enumerate(data):
+            data[i]['query'] = re.sub(' +', ' ', data[i]['query'].replace(";", '').replace('"', "'"))
+
         self.data = data
         return data
 
@@ -168,7 +189,7 @@ class SQLParser():
             return self.to_string(querydict['value'])
         elif key == 'between':
             colname, left, right = querydict[key]
-            return f"{colname} BETWEEN {left} AND {right}"
+            return f"{self.to_string(colname)} BETWEEN {self.to_string(left)} AND {self.to_string(right)}"
         elif key == 'query':
             new_inner_query = self.reconstruct(querydict['query'])
             self.subquery.append(new_inner_query)
@@ -189,8 +210,8 @@ class SQLParser():
             ord_q += [self.tok['dleft'] + ' ' + x for x in self.order(rec_q['op']['left'])]
             ord_q += [self.tok['dright'] + ' ' + x for x in self.order(rec_q['op']['right'])]
             ord_q.append(f"{self.tok['rleft']} {rec_q['op']['op'].upper()} {self.tok['rright']}")
-            if rec_q['op']['left'].get('query') is not None:
-                import pdb; pdb.set_trace()
+            #if rec_q['op']['left'].get('query') is not None:
+            #    import pdb; pdb.set_trace()
             return ord_q
 
         ORDERING = ['select', 'from', 'where', 'groupby', 'having', 'orderby', 'limit']

@@ -30,7 +30,7 @@ def __deploy__():
     source_file = File("moz_sql_parser/sql_parser.py")
     lines = source_file.read().split("\n")
     lines = [
-        "sys.setrecursionlimit(1500)"
+        "sys.setrecursionlimit(3000)"
         if line.startswith("sys.setrecursionlimit")
         else line
         for line in lines

@@ -1,0 +1,11 @@
+line 524
+SELECT fname, sex FROM Student WHERE StuID IN (SELECT StuID FROM Has_allergy WHERE Allergy  =  "Milk" EXCEPT SELECT StuID FROM Has_allergy WHERE Allergy  =  "Cat") 
+[D_INNER_0] [D_LEFT] SELECT StuID FROM Has_allergy as T1 JOIN Allergy_Type as T2 ON T1.Allergy = T2.Allergy
+[D_INNER_0] [D_LEFT] SELECT T1.StuID FROM [R_PREV]
+[D_INNER_0] [D_LEFT] [R_PREV] where T2.allergytype = food
+[D_INNER_0] [D_RIGHT] SELECT * FROM Has_allergy as T1 JOIN Allergy_Type as T2 ON T1.Allergy = T2.Allergy
+[D_INNER_0] [D_RIGHT] SELECT T1.StuID FROM [R_PREV]
+[D_INNER_0] [D_RIGHT] [R_PREV] where T2.allergytype = animal
+[D_INNER_0] [R_LEFT] intersect [R_RIGHT]
+SELECT AVG(age) FROM Student
+[R_PREV] where StuID IN [R_INNER_0]
